@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>学生资助政策问答平台</title>
+<style>
+  body { font-family: "微软雅黑", sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+  #chatContainer { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 80vh; }
+  #chatBox { flex: 1; padding: 15px; overflow-y: auto; border-bottom: 1px solid #ddd; }
+  .message { margin-bottom: 12px; }
+  .user { text-align: right; }
+  .user .text { background: #0078ff; color: white; display: inline-block; padding: 8px 12px; border-radius: 15px; max-width: 75%; }
+  .system .text { background: #eee; color: #333; display: inline-block; padding: 8px 12px; border-radius: 15px; max-width: 75%; white-space: pre-wrap; }
+  #inputArea { display: flex; padding: 10px; }
+  #userInput { flex: 1; padding: 10px; font-size: 16px; border-radius: 20px; border: 1px solid #ccc; outline: none; }
+  #sendBtn { padding: 0 20px; margin-left: 10px; background: #0078ff; border: none; color: white; border-radius: 20px; cursor: pointer; font-size: 16px; }
+  #sendBtn:hover { background: #005bb5; }
+  a.qa-link { color: #0078ff; cursor: pointer; text-decoration: underline; }
+  #chatBox .message {
+    display: flex;
+    align-items: flex-start;
+    margin: 10px 0;
+  }
+
+  #chatBox .message.user {
+    justify-content: flex-end;
+  }
+
+  #chatBox .message.system {
+    justify-content: flex-start;
+  }
+
+  #chatBox .message .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin: 0 8px;
+  }
+
+  #chatBox .message .text {
+    background: #f1f1f1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 60%;
+    word-break: break-word;
+  }
+
+  #chatBox .message.user .text {
+    background: #cce5ff;
+  }
+
+</style>
+</head>
+<body>
+
+<div id="chatContainer">
+  <div id="chatBox"></div>
+  <div id="inputArea">
+    <input type="text" id="userInput" placeholder="请输入您的问题..." autocomplete="off" />
+    <button id="sendBtn">发送</button>
+  </div>
+</div>
+
+<script>
+// 树状关键词库，answer留空你后续填充
+const qaTree = [
+  {
+    title: "高等教育阶段",
+    keywords: ["高等教育", "高校资助"],
+    children: [
+      { title: "绿色通道", keywords: ["绿色通道"],  answer: "为切实保证家庭经济困难学生顺利入学，各高校都必须设立“绿色通道”，对被录取入学，家庭经济确实困难、无法缴纳学费的新生，，一律先办理入学手续，然后再根据核实后的情况，分别采取不同办法予以资助。" },
+
+      {
+        title: "研究生国家奖助学金",
+        keywords: ["研究生奖学金", "研究生资助","研究生","研究生助学金"],
+        children: [
+          { title: "研究生国家奖学金", keywords: ["研究生国家奖学金"], answer: "奖励对象是特别优秀的全日制在校研究生。奖励标准为博士研究生国家奖学金每生每年30000元，硕士研究生国家奖学金每生每年20000元。" },
+          { title: "研究生学业奖学金", keywords: ["研究生学业奖学金"], answer: "奖励对象是表现良好的全日制在校研究生。高校可根据实际情况，分等级设立本校研究生学业奖学金，最高奖励金额标准不得超过同阶段研究生国家奖学金标准。" },
+          { title: "研究生国家助学金", keywords: ["研究生国家助学金"], answer: "资助对象是纳入全国研究生招生计划、没有固定工资收入、规定学制期内的全日制在读研究生。资助标准为博士研究生每生每年13000元，硕士研究生每生每年6000元。" },
+          { title: "研究生三助一辅", keywords: ["三助一辅"], answer: "研究生在不影响专业学习和研究的原则下，参加学校设置的“三助一辅(助研、助教、助管和担任学生辅导员工作)岗位，获得一定的津贴报酬。“三助一辅”津贴标准由高校依据国家有关规定，结合当地物价水平等因素合理确定。" }
+        ]
+      },
+
+      {
+        title: "本专科生国家奖助学金",
+        keywords: ["本科奖学金", "本科资助","本科生","大专","本科助学金","专科"],
+        children: [
+          { title: "本专科生国家奖学金", keywords: ["本科国家奖学金","专科国家奖学金"],  answer: "奖励对象是普通高校全日制本专科二年级及以上优秀在校学生,奖励标准为每生每年10000元。同一学年内，获得国家奖学金的家庭经济困难学生可以同时申请并获得国家助学金，但不能同时获得国家励志奖学金。" },
+          { title: "本专科生国家励志奖学金", keywords: ["国家励志奖学金"],  answer: "奖励对象是品学兼优、家庭经济困难的二年级及以上的普通高校全日制本专科在校生，奖励标准为每生每年6000元。同一学年内，获得国家励志奖学金的家庭经济困难学生可以同时申请并获得国家助学金，但不能同时获得国家奖学金。" },
+          { title: "本专科生国家助学金", keywords: ["本科国家助学金","专科国家助学金"],  answer: "资助对象是家庭经济困难的普通高校全日制本专科学生(含预科生)，平均资助标准为每生每年3700元，具体标准由高校在每生每年2500-5000元范围内自主确定，可分为2-3档。全日制在校退役士兵学生原则上都可享受本专科生国家助学金，资助标准为每生每年3700元。" }
+        ]
+      },
+
+      { title: "生源地信用助学贷款", keywords: ["生源地贷款", "助学贷款"],  answer: "贷款对象是家庭经济困难的普通高校全日制本专科生(含预科生)、研究生。贷款金额本专科生每生每年最高申请金额不超过20000元(研究生不超过25000元),新签订的国家助学贷款合同利率按照同期同档次贷款市场报价利率LPR5Y减70个基点执行。贷款学生在校学习期间的国家助学贷款利息全部由财政补贴，贷款学生毕业后的前五年内只需偿还利息不需还本金，自毕业第六年起开始偿还本金和利息，助学贷款最长贷款期限可为剩余学制加15年，最长不超过22年。大学新生和在校生可在开学前向入学前的户籍所在地县级学生资助管理部门申请生源地信用助学贷款，已申请过生源地信用助学贷款的学生可直接在网上申请续贷。" },
+      { title: "广东省家庭经济困难大学新生资助", keywords: ["新生资助"],  answer: "资助对象是当年考入全日制普通高校、广东省户籍的家庭经济困难本专科一年级新生，每人最高不超过6000元。考入省内高校的新生开学时向学校申请，考入省外高校的新生向户籍所在地县级教育部门申请。" },
+
+      {
+        title: "学费补偿和国家助学贷款代偿等政策",
+        keywords: ["学费补偿", "代偿"],
+        children: [
+          { title: "高校学生应征入伍服兵役学费补偿和国家助学贷款代偿及退役复学后学费减免", keywords: ["入伍学费补偿", "退役复学学费减免"],  answer: "补助对象是应征入伍服义务兵役的高校在校生、毕业生及退役后复学的原高校在校生，直接招收为军士的高校学生。国家对应征入伍服义务兵役和直接招收为军士的高校学生在校期间缴纳的学费实行补偿、对在校期间用于学费的国家助学贷款(含校园地助学贷款和生源地信用助学贷款)实行代偿，退役后复学的原高校在校生实行学费减免。自2024年秋季学期起，学费补偿、国家助学贷款代偿和学费减免的补助标准为本专科生每生每年不超过20000元(研究生不超过25000元)。" },
+          { title: "退役士兵学费减免资助", keywords: ["退役士兵学费减免"],  answer: "对退役后，自主就业，通过全国统一高考或高职分类招考方式考入高等学校并到校报到的入学新生实行学费减免，自2024年秋季学期起，学费减免标准为本专科生每生每年不超过20000元。" },
+          { title: "三支一扶国家助学贷款代偿", keywords: ["三支一扶", "贷款代偿"],  answer: "广东省高校学生毕业后到基层从事支农、支教、支医和帮扶乡村振兴工作，服务期满考核合格继续在基层单位工作满1年以上，可向服务所在地地级以上市人社部门提交申请代偿在校学习期间获得的用于学费的国家助学贷款本息。" }
+        ]
+      },
+
+      {
+        title: "学校资助措施",
+        keywords: ["学校资助"],
+        children: [
+          { title: "勤工助学", keywords: ["勤工助学"],  answer: "学生在学校的组织下，利用课余时间，通过自己的劳动取得合法报酬，用于改善学习和生活条件。学生参加勤工助学的时间原则上每周不超过8小时，每月不超过40小时。最低小时工资不低于高校按所在地当年的最低小时工资标准。" },
+          { title: "其他资助政策", keywords: ["其他资助", "社会捐赠"],  answer: "高校利用从事业收入(民办学校从学费收入)提取的学生奖助基金、社会组织和个人捐赠资金等，设立奖学金、助学金，用于奖励和资助本校学生。" }
+        ]
+      }
+    ]
+  },
+  {
+    title: "高中和中职教育阶段",
+    keywords: ["高中教育", "中专教育","中职教育"],
+    children: [
+      {
+        title: "普通高中",
+        keywords: ["普通高中"],
+        children: [
+          { title: "普通高中免学杂费", keywords: ["高中免学费", "高中学杂费"],  answer: "对具有正式学籍的普通高中原建档立卡家庭学生、残疾学生、农村低保家庭学生、农村特困救助供养学生免学杂费。财政按相关标准补助学校，民办学校经批准的学杂费标准高于财政补助基准的部分，学校可以按规定继续向学生收取。" },
+          { title: "普通高中学校国家助学金", keywords: ["高中助学金"],  answer: "资助对象为具有正式注册学籍的普通高中家庭经济困难学生，平均资助标准为每生每年2300元。" }
+        ]
+      },
+      {
+        title: "中等职业教育",
+        keywords: ["中职", "职业教育","中专"],
+        children: [
+          { title: "中等职业学校国家奖学金", keywords: ["中职国家奖学金"],  answer: "奖励学习成绩、技能表现等方面特别优秀的中等职业学校全日制在校生，奖励标准为每生每年6000元。" },
+          { title: "中等职业教育免学费", keywords: ["中职免学费", "中专免学费"],  answer: "对中等职业学校全日制学历教育正式学籍一、二、三年级在校生中农村(含县镇)学生、残疾学生、在民族地区就读的学生、城市涉农专业学生，以及家庭经济困难学生和戏曲表演专业学生免学费(其他艺术类相关表演专业学生除外)。财政按相关标准补助学校，民办学校经批准的学费标准高于财政补助基准的部分，学校可以按规定继续向学生收取。" },
+          { title: "中等职业教育国家助学金", keywords: ["中专助学金", "中职助学金","中职国家助学金"],  answer: "资助中等职业学校全日制学历教育正式学籍的一、二、三年级在校涉农专业学生和非涉农专业家庭经济困难学生。六盘山区等11个原连片特困地区和西藏、四省涉藏州县、新疆南疆四地州中等职业学校农村学生(不含县城)全部纳入享受国家助学金范围。平均资助标准为每生每年2300元。" }
+        ]
+      },
+      { title: "其他资助措施", keywords: ["中职其他资助", "高中其他资助","中专其他资助"],  answer: "学校利用从事业收入(民办学校从学费收入)提取的资助经费、社会组织和个人捐赠资金等，奖励和资助学生。" }
+    ]
+  },
+  { title: "义务教育阶段", keywords: ["义务教育"],  answer: "(一)对家庭经济困难学生给予生活费补助，补助标准为家庭经济困难寄宿生小学每生每年1250元、初中每生每年1500元;家庭经济困难非寄宿生小学每生每年625元、初中每生每年750元。\n(二)对我省少数民族地区寄宿制民族班少数民族学生给予生活费补助，补助标准为小学每生每年800元、初中每生每年1000元，其中的家庭经济困难学生，按家庭经济困难寄宿生生活费补助标准执行。\n(三)实施农村义务教育学生营养改善计划。我省在韶关市乳源瑶族自治县、清远市连山壮族瑶族自治县、清远市连南瑶族自治县3个县开展农村义务教育学生营养改善计划省级计划，为计划学校受益学生提供营养膳食，膳食补助标准为每生每天补助5元，每学年按200天计算。鼓励各地积极开展地方计划。" },
+  { title: "学前教育阶段", keywords: ["学前", "幼儿园资助"],  answer: "资助在经县级以上教育行政部门审批设立的公办幼儿园(含公办性质幼儿园)、普惠性民办幼儿园和幼儿班就读的3-6岁常住人口家庭经济困难儿童、孤儿和残疾儿童，资助标准为每生每年1000元。" }
+];
+
+// ------------------ 聊天区相关 ---------------------
+
+const chatBox = document.getElementById("chatBox");
+const userInput = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
+
+sendBtn.addEventListener("click", onUserSend);
+userInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    onUserSend();
+  }
+});
+
+function onUserSend() {
+  const text = userInput.value.trim();
+  if (!text) return;
+  appendMessage("用户", text);
+  userInput.value = "";
+  processInput(text);
+}
+
+function preprocessInput(input) {
+  return input.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').replace(/\s+/g, '').toLowerCase();
+}
+
+function searchQAByExactSubstr(input, nodeList) {
+  let results = [];
+  const cleanInput = preprocessInput(input);
+
+  for (const node of nodeList) {
+    let childMatches = [];
+    if (node.children && node.children.length > 0) {
+      childMatches = searchQAByExactSubstr(input, node.children);
+    }
+
+    const nodeMatched = node.keywords.some(k =>
+      cleanInput.includes(preprocessInput(k))
+    );
+
+    if (childMatches.length > 0) {
+      // 子节点有匹配，仅返回子节点
+      results = results.concat(childMatches);
+    } else if (nodeMatched) {
+      // 子节点没匹配，父节点自己匹配，添加父节点
+      results.push(node);
+    }
+  }
+
+  return results;
+}
+
+function processInput(input) {
+  const cleanedInput = preprocessInput(input);
+  const matches = searchQAByExactSubstr(cleanedInput, qaTree);
+
+  if (matches.length > 0) {
+    // 正常流程
+    if (matches.length === 1) {
+      handleNode(matches[0]);
+    } else {
+      let msg = "我检测到以下相关内容，请点击查看详细内容：<br>";
+      matches.forEach((item, idx) => {
+        msg += `<a href="#" class="qa-link" data-idx="${idx}">${item.title}</a><br>`;
+      });
+      appendMessage("系统", msg);
+      bindLinks(matches);
+    }
+    return;
+  }
+
+  // 没匹配上，尝试检测问候语
+  if (isGreeting(cleanedInput)) {
+    appendMessage("系统", "您好，我是学生资助政策智能小助手，请问您想了解哪方面内容？");
+  } else {
+    appendMessage("系统", "抱歉，我只能回答与学生资助政策相关的问题。");
+  }
+}
+
+function isGreeting(input) {
+  const greetings = ["你好", "您好", "在吗", "请问", "有人吗", "我想咨询"];
+  return greetings.some(phrase => input.includes(phrase));
+}
+
+
+function handleNode(node) {
+  if (node.answer) {
+    appendMessage("系统", node.answer);
+  } else if (node.children && node.children.length > 0) {
+    let msg = `找到【${node.title}】相关内容\n请选择想要咨询的具体内容：<br>`;
+    node.children.forEach((child, idx) => {
+      msg += `<a href="#" class="qa-link" data-idx="${idx}">${child.title}</a><br>`;
+    });
+    appendMessage("系统", msg);
+
+    // 绑定蓝字点击
+    bindLinks(node.children);
+  } else {
+    appendMessage("系统", "该政策内容尚未填写，请稍后关注。");
+  }
+}
+
+
+function appendMessage(sender, text) {
+  const msgDiv = document.createElement("div");
+  msgDiv.classList.add("message");
+  msgDiv.classList.add(sender === "用户" ? "user" : "system");
+
+  const avatarSrc = sender === "用户" ? "img/user.png" : "img/system.png";
+
+  if (sender === "用户") {
+    msgDiv.innerHTML = `
+      <div class="text">${text}</div>
+      <img src="${avatarSrc}" class="avatar">
+    `;
+  } else {
+    msgDiv.innerHTML = `
+      <img src="${avatarSrc}" class="avatar">
+      <div class="text">${text}</div>
+    `;
+  }
+
+  chatBox.appendChild(msgDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+
+
+function bindLinks(nodeList) {
+  setTimeout(() => {
+    const systemMessages = document.querySelectorAll("#chatBox .system .text");
+    const lastMsg = systemMessages[systemMessages.length - 1];
+    lastMsg.querySelectorAll(".qa-link").forEach(link => {
+      link.addEventListener("click", e => {
+        e.preventDefault();
+        const idx = parseInt(e.target.dataset.idx);
+        const selectedNode = nodeList[idx];
+        appendMessage("用户", selectedNode.title);
+        handleNode(selectedNode);
+      });
+    });
+  }, 0);
+}
+
+window.onload = function () {
+  appendMessage("系统", "您好，我是学生资助政策智能小助手，请问您想了解哪方面内容？");
+};
+
+</script>
+
+</body>
+</html>
