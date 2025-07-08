@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>学生资助政策问答平台</title>
+<style>
+  body { font-family: "微软雅黑", sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+  #chatContainer { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 80vh; }
+  #chatBox { flex: 1; padding: 15px; overflow-y: auto; border-bottom: 1px solid #ddd; }
+  .message { margin-bottom: 12px; }
+  .user { text-align: right; }
+  .user .text { background: #0078ff; color: white; display: inline-block; padding: 8px 12px; border-radius: 15px; max-width: 75%; }
+  .system .text { background: #eee; color: #333; display: inline-block; padding: 8px 12px; border-radius: 15px; max-width: 75%; white-space: pre-wrap; }
+  #inputArea { display: flex; padding: 10px; }
+  #userInput { flex: 1; padding: 10px; font-size: 16px; border-radius: 20px; border: 1px solid #ccc; outline: none; }
+  #sendBtn { padding: 0 20px; margin-left: 10px; background: #0078ff; border: none; color: white; border-radius: 20px; cursor: pointer; font-size: 16px; }
+  #sendBtn:hover { background: #005bb5; }
+  a.qa-link { color: #0078ff; cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div id="chatContainer">
+  <div id="chatBox"></div>
+  <div id="inputArea">
+    <input type="text" id="userInput" placeholder="请输入您的问题..." autocomplete="off" />
+    <button id="sendBtn">发送</button>
+  </div>
+</div>
+
+<script>
+// 树状关键词库，answer留空你后续填充
+const qaTree = [
+  {
+    title: "高等教育阶段",
+    keywords: ["高等教育", "高校资助"],
+    children: [
+      { title: "绿色通道", keywords: ["绿色通道"],  answer: "666" },
+
+      {
+        title: "研究生国家奖助学金",
+        keywords: ["研究生奖助学金", "研究生资助","研究生"],
+        children: [
+          { title: "研究生国家奖学金", keywords: ["研究生国家奖学金", "研究生奖学金"], answer: "1" },
+          { title: "研究生学业奖学金", keywords: ["研究生学业奖学金"], answer: "2" },
+          { title: "研究生国家助学金", keywords: ["研究生国家助学金", "研究生助学金"], answer: "3" },
+          { title: "研究生三助一辅", keywords: ["三助一辅", "助研", "助教", "助管", "学生辅导员"], answer: "4" }
+        ]
+      },
+
+      {
+        title: "本专科生国家奖助学金",
+        keywords: ["本科奖助学金", "本专科资助"],
+        children: [
+          { title: "本专科生国家奖学金", keywords: ["本科国家奖学金"],  answer: "666" },
+          { title: "本专科生国家励志奖学金", keywords: ["国家励志奖学金"],  answer: "666" },
+          { title: "本专科生国家助学金", keywords: ["本科助学金"],  answer: "666" }
+        ]
+      },
+
+      { title: "生源地信用助学贷款", keywords: ["生源地贷款", "助学贷款"],  answer: "666" },
+      { title: "广东省家庭经济困难大学新生资助", keywords: ["广东省新生资助"],  answer: "666" },
+
+      {
+        title: "学费补偿和国家助学贷款代偿等政策",
+        keywords: ["学费补偿", "贷款代偿", "学费减免"],
+        children: [
+          { title: "高校学生应征入伍服兵役学费补偿和国家助学贷款代偿及退役复学后学费减免", keywords: ["入伍学费补偿", "贷款代偿", "退役复学学费减免"],  answer: "666" },
+          { title: "退役士兵学费减免资助", keywords: ["退役士兵学费减免"],  answer: "666" },
+          { title: "三支一扶国家助学贷款代偿", keywords: ["三支一扶", "基层贷款代偿"],  answer: "666" }
+        ]
+      },
+
+      {
+        title: "学校资助措施",
+        keywords: ["勤工助学", "学校资助"],
+        children: [
+          { title: "勤工助学", keywords: ["勤工助学"],  answer: "666" },
+          { title: "其他资助政策", keywords: ["其他资助", "社会捐赠"],  answer: "666" }
+        ]
+      }
+    ]
+  },
+  {
+    title: "高中和中职教育阶段",
+    keywords: ["高中资助", "中职资助"],
+    children: [
+      {
+        title: "普通高中",
+        keywords: ["普通高中"],
+        children: [
+          { title: "普通高中免学杂费", keywords: ["高中免学费", "高中学杂费"],  answer: "666" },
+          { title: "普通高中学校国家助学金", keywords: ["高中国家助学金"],  answer: "666" }
+        ]
+      },
+      {
+        title: "中等职业教育",
+        keywords: ["中职", "职业教育"],
+        children: [
+          { title: "中等职业学校国家奖学金", keywords: ["中职国家奖学金"],  answer: "666" },
+          { title: "中等职业教育免学费", keywords: ["中职免学费", "中等职业免学费"],  answer: "666" },
+          { title: "中等职业教育国家助学金", keywords: ["中职国家助学金", "中等职业助学金"],  answer: "666" }
+        ]
+      },
+      { title: "其他资助措施", keywords: ["中职其他资助", "高中其他资助"],  answer: "666" }
+    ]
+  },
+  { title: "义务教育阶段", keywords: ["义务教育资助"],  answer: "666" },
+  { title: "学前教育阶段", keywords: ["学前教育资助", "幼儿园资助"],  answer: "666" }
+];
+
+// ------------------ 聊天区相关 ---------------------
+
+const chatBox = document.getElementById("chatBox");
+const userInput = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
+
+sendBtn.addEventListener("click", onUserSend);
+userInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    onUserSend();
+  }
+});
+
+function appendMessage(sender, text) {
+  const msgDiv = document.createElement("div");
+  msgDiv.classList.add("message");
+  msgDiv.classList.add(sender === "用户" ? "user" : "system");
+  msgDiv.innerHTML = `<div class="text">${text}</div>`;
+  chatBox.appendChild(msgDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function onUserSend() {
+  const text = userInput.value.trim();
+  if (!text) return;
+  appendMessage("用户", text);
+  userInput.value = "";
+  processInput(text);
+}
+
+function preprocessInput(input) {
+  return input.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').replace(/\s+/g, '').toLowerCase();
+}
+
+function searchQAByExactSubstr(input, nodeList) {
+  let results = [];
+  const cleanInput = preprocessInput(input);
+
+  for (const node of nodeList) {
+    let childMatches = [];
+    if (node.children && node.children.length > 0) {
+      childMatches = searchQAByExactSubstr(input, node.children);
+    }
+
+    const nodeMatched = node.keywords.some(k =>
+      cleanInput.includes(preprocessInput(k))
+    );
+
+    if (childMatches.length > 0) {
+      // 子节点有匹配，仅返回子节点
+      results = results.concat(childMatches);
+    } else if (nodeMatched) {
+      // 子节点没匹配，父节点自己匹配，添加父节点
+      results.push(node);
+    }
+  }
+
+  return results;
+}
+
+function processInput(input) {
+  const matches = searchQAByExactSubstr(input, qaTree);
+
+  if (matches.length === 0) {
+    appendMessage("系统", "抱歉，我只能回答与学生资助政策相关的问题。");
+    return;
+  }
+
+  if (matches.length === 1) {
+    const node = matches[0];
+    handleNode(node);
+  } else {
+    let msg = "我检测到以下相关内容，请点击查看详细内容：<br>";
+    matches.forEach((item, idx) => {
+      msg += `<a href="#" class="qa-link" data-idx="${idx}">${item.title}</a><br>`;
+    });
+    appendMessage("系统", msg);
+    bindLinks(matches);
+  }
+}
+
+function handleNode(node) {
+  if (node.answer) {
+    appendMessage("系统", node.answer);
+  } else if (node.children && node.children.length > 0) {
+    appendMessage("系统", `找到【${node.title}】相关内容：`);
+    let msg = "请选择具体内容：<br>";
+    node.children.forEach((child, idx) => {
+      msg += `<a href="#" class="qa-link" data-idx="${idx}">${child.title}</a><br>`;
+    });
+    appendMessage("系统", msg);
+    bindLinks(node.children);
+  } else {
+    appendMessage("系统", "该政策内容尚未填写，请稍后关注。");
+  }
+}
+
+function bindLinks(nodeList) {
+  setTimeout(() => {
+    const systemMessages = document.querySelectorAll("#chatBox .system .text");
+    const lastMsg = systemMessages[systemMessages.length - 1];
+    lastMsg.querySelectorAll(".qa-link").forEach(link => {
+      link.addEventListener("click", e => {
+        e.preventDefault();
+        const idx = parseInt(e.target.dataset.idx);
+        const selectedNode = nodeList[idx];
+        appendMessage("用户", selectedNode.title);
+        handleNode(selectedNode);
+      });
+    });
+  }, 0);
+}
+
+</script>
+
+</body>
+</html>
