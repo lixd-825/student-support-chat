@@ -139,32 +139,30 @@
     </button>
   </div>
   <div id="chatContainer">
-        <div id="chatBox"></div>
-        <div id="restartArea">
-            <button id="restartBtn">
-                <img src="img/recycle.png" alt="重启图标">
-                开启新对话
-            </button>
-        </div>
-        <div id="inputArea">
-            <input type="text" id="userInput" placeholder="请输入您的问题..." autocomplete="off" />
-            <button id="sendBtn">发送</button>
-        </div>
+    <div id="chatBox"></div>
+    <div id="restartArea">
+      <button id="restartBtn">
+        <img src="img/recycle.png" alt="重启图标">
+        开启新对话
+      </button>
+    </div>
+    <div id="inputArea">
+      <input type="text" id="userInput" placeholder="请输入您的问题..." autocomplete="off" />
+      <button id="sendBtn">发送</button>
+    </div>
   </div>
 
   <script>
-        const homePage = document.getElementById('homePage');
-        const chatContainer = document.getElementById('chatContainer');
-        const startChatBtn = document.getElementById('startChatBtn');
-        const restartBtn = document.getElementById('restartBtn'); // 获取重启按钮
-        const chatBox = document.getElementById("chatBox");
+    const homePage = document.getElementById('homePage');
+    const chatContainer = document.getElementById('chatContainer');
+    const startChatBtn = document.getElementById('startChatBtn');
 
-        startChatBtn.addEventListener('click', () => {
-            homePage.style.display = 'none';
-            chatContainer.style.display = 'flex';
-            // 触发聊天框的初始消息
-            appendMessage("系统", "您好，我是学生资助政策智能小助手，请问您想了解哪方面内容？");
-        });
+    startChatBtn.addEventListener('click', () => {
+      homePage.style.display = 'none';
+      chatContainer.style.display = 'flex';
+      // 触发聊天框的初始消息
+      appendMessage("系统", "您好，我是学生资助政策智能小助手，请问您想了解哪方面内容？");
+    });
 
     // 树状关键词库，answer留空你后续填充
     const qaTree = [
@@ -248,15 +246,16 @@
 
     // ------------------ 聊天区相关 ---------------------
 
-        const userInput = document.getElementById("userInput");
-        const sendBtn = document.getElementById("sendBtn");
+    const chatBox = document.getElementById("chatBox");
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
 
-        sendBtn.addEventListener("click", onUserSend);
-        userInput.addEventListener("keydown", e => {
-            if (e.key === "Enter") {
-                onUserSend();
-            }
-        });
+    sendBtn.addEventListener("click", onUserSend);
+    userInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        onUserSend();
+      }
+    });
 
     function onUserSend() {
       const text = userInput.value.trim();
@@ -418,15 +417,7 @@
         });
       }, 0);
     }
-        function clearChatHistory() {
-            // 清空聊天框
-            chatBox.innerHTML = '';
-            // 重新添加初始消息
-            appendMessage("系统", "您好，我是学生资助政策智能小助手，请问您想了解哪方面内容？");
-        }
 
-        // 绑定重启按钮的点击事件
-        restartBtn.addEventListener('click', clearChatHistory);
   </script>
 
 </body>
