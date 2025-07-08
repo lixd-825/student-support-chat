@@ -49,6 +49,35 @@
   #chatBox .message.user .text {
     background: #cce5ff;
   }
+#restartArea {
+  text-align: center;
+  padding: 10px 0;
+  background: #fff;
+}
+
+#restartBtn {
+  background: transparent;
+  color: #000;  /* 黑色文字 */
+  border: none;
+  font-size: 18px;
+  padding: 6px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 350px;
+}
+
+#restartBtn:hover {
+  background-color: rgba(0, 0, 0, 0.05);  /* 悬停时淡灰背景 */
+}
+
+#restartBtn img {
+  width: 22px;
+  height: 22px;
+}
+
 
 </style>
 </head>
@@ -56,6 +85,12 @@
 
 <div id="chatContainer">
   <div id="chatBox"></div>
+  <div id="restartArea">
+  <button id="restartBtn">
+    <img src="img/recycle.png" alt="重启图标">
+    开启新对话
+  </button>
+</div>
   <div id="inputArea">
     <input type="text" id="userInput" placeholder="请输入您的问题..." autocomplete="off" />
     <button id="sendBtn">发送</button>
@@ -213,7 +248,38 @@ function processInput(input) {
     return;
   }
 
-  // 没匹配上，尝试检测问候语
+  // 【新增】如果包含“奖学金”或“助学金”，提示选择阶段
+  if (cleanedInput.includes("奖学金") || cleanedInput.includes("助学金")) {
+    const options = [
+      { title: "高等教育阶段", ref: "高等教育阶段" },
+      { title: "高中和中职教育阶段", ref: "高中和中职教育阶段" }
+    ];
+
+    let msg = `您想了解哪个阶段的“奖学金”或“助学金”相关内容呢？请选择具体所属阶段：<br>`;
+    options.forEach((opt, idx) => {
+      msg += `<a href="#" class="qa-link" data-idx="${idx}" data-ref="${opt.ref}">${opt.title}</a><br>`;
+    });
+    appendMessage("系统", msg);
+
+    // 点击后自动触发再次提问
+    const systemMessages = document.querySelectorAll("#chatBox .system .text");
+    const lastSystemMsg = systemMessages[systemMessages.length - 1];
+    lastSystemMsg._relatedNodes = options;
+
+    setTimeout(() => {
+      document.querySelectorAll(".qa-link").forEach(link => {
+        link.addEventListener("click", e => {
+          e.preventDefault();
+          const ref = e.target.dataset.ref;
+          userInput.value = ref;
+          onUserSend(); // 自动处理这个阶段关键词
+        });
+      });
+    }, 10);
+    return;
+  }
+
+  // 检测问候语
   if (isGreeting(cleanedInput)) {
     appendMessage("系统", "您好，我是学生资助政策智能小助手，请问您想了解哪方面内容？");
   } else {
